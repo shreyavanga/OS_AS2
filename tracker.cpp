@@ -509,14 +509,23 @@ string tempuser_id;
         file_entry->file_size = stoi(file_size);
         file_entry->users.push_back(temporary->user_id);
         string key = group_id+filepath;
-        gidfile[key] = file_entry;
-        map<string,struct file*>:: iterator itrr;
-
-        for(itrr=gidfile.begin();itrr!=gidfile.end();itrr++)
-        {
-          cout<<itrr->first<<endl;
+        string res;
+        if(gidfile.find(key) != gidfile.end()){
+           res = "file already exist but user pushed to the owners list";
+          cout<<res<<endl;
+          gidfile[key]->users.push_back(temporary->user_id);
         }
-        string res = "File uploaded successfully";
+        else{
+          gidfile[key] = file_entry;
+          map<string,struct file*>:: iterator itrr;
+
+          for(itrr=gidfile.begin();itrr!=gidfile.end();itrr++)
+          {
+            cout<<itrr->first<<endl;
+          }
+           res = "File uploaded successfully";
+        }
+
         csend = send(clientSocket,(char*)res.c_str(),1024,0);
 
 
@@ -528,6 +537,59 @@ string tempuser_id;
 
       }
       else if(strcmp(temp1[0],"download_file")==0){
+
+        string groupid = temp1[1];
+        string filename = temp1[2];
+        string destination = temp1[3];
+      //  string hash = temp1[4];
+      //  struct file *file_entry;
+      //  cout<<"list groups"<<endl;
+      //  file_entry = (struct file*)malloc(sizeof(file));
+        // file_entry->sha = hash;
+        // file_entry->file_size = stoi(file_size);
+        // file_entry->users.push_back(temporary->user_id);
+        string key = groupid+filename;
+
+      //  string res = "filename recived";
+        //csend =send(clientSocket,(char*)res.c_str(),1024,0);
+       if(gidfile.find(key) == gidfile.end()){
+          string res = "no such file exists";
+          cout<<res<<endl;
+          //gidfile[key]->users.push_back(temporary->user_id);
+          csend = send(clientSocket,(char*)res.c_str(),1024,0);
+
+        }
+        else{
+
+        string  res = "file exists";
+         cout<<res<<endl;
+      //  csend = send(clientSocket, (char*)res.c_str(), 1024, 0);
+          vector<string> :: iterator iterr;
+
+          int n = (gidfile[key]->users).size();
+          string val = to_string(n);
+          cout<<"val of n = "<<val<<endl;
+           csend = send(clientSocket,(char *)val.c_str(),sizeof(val),0);
+           int ack;
+           recv(clientSocket,ack,sizeof(ack),0);
+        //  gidfile[key] = file_entry;
+
+        // ---------send sha of the file  if n>0
+        if(n>0){
+
+
+           csend = send(clientSocket,(char *)val.c_str(),sizeof(val),0);
+        }
+
+        for(iterr = gidfile[key]->users.begin() ; iterr != gidfile[key]->users.end() ;iterr++){
+          cout<< *iterr<<endl;
+        }
+      //  csend = send(clientSocket,(char *)res.c_str(),sizeof(res),0);
+      }
+
+
+
+
 
 
       }
@@ -632,7 +694,7 @@ void* serverThreadFunc(void* threadarg){
   int PORT;
   // cout<<"enter port";
   // cin>>PORT;
-  PORT = 7385;
+  PORT = 7386;
   //create a socket
   int server_sock;
   server_sock = socket(AF_INET,SOCK_STREAM,0);

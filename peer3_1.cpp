@@ -717,7 +717,7 @@ void* clientThreadFunc(void* threadarg){
     }
 
  }
- else if(strcmp(temp1[0],"download_file")==0 && choice==1){
+ else if(strcmp(temp1[0],"download_file")==0 && choice==0){
 
       char buf[256] = {0};
       char download_filename[1024];
@@ -926,6 +926,7 @@ void* clientThreadFunc(void* threadarg){
 
   //  string sha = calsha(filepath);
     //tempfinal = tempuser_id+":"+temppasswd;
+
       serversend = send(sockfd,(char*)tempfinal.c_str(),4096,0);
       int byteRec = recv(sockfd,buf,4096,0);
       if(byteRec < 0){
@@ -942,7 +943,41 @@ void* clientThreadFunc(void* threadarg){
 
  }
  else if(strcmp(temp1[0],"download_file")==0 && choice == 1){
-   
+
+   string cmd = temp1[0];
+    string groupid = temp1[1];
+    string filename = temp1[2];
+    // if(strcmp(temp1[3],NULL)==0){
+    //   cout<<"enter destination path"<<endl;
+    // }
+    // else{
+      string dest = temp1[3];
+      string tempfinal = cmd + ":" + groupid + ":" + filename + ":" + dest;
+      cout<<"final str = "<<tempfinal<<endl;
+
+      serversend = send(sockfd,(char*)tempfinal.c_str(),4096,0);
+      int byteRec = recv(sockfd,buf,4096,0);
+      if(byteRec < 0){
+        perror("connection issue");
+        exit(1);
+      }
+      if(byteRec == 0){
+        perror("client disconnected ");
+        exit(1);
+      }
+      string receive = string(buf,0,byteRec);
+      cout<<"received- : "<<receive<<endl;
+
+      int ack =1;
+      serversend = send(sockfd,(int*)ack,sizeof(ack),0);
+
+
+
+  //  }
+
+
+
+
  }
  else{
    cout<<"login first or wrong command"<<endl;
