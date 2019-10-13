@@ -500,21 +500,25 @@ string tempuser_id;
       else if(strcmp(temp1[0],"upload_file")==0){
         string filepath = temp1[1];
         string group_id = temp1[2];
+        string file_size = temp1[3];
+        string hash = temp1[4];
+        struct file *file_entry;
+        cout<<"list groups"<<endl;
+        file_entry = (struct file*)malloc(sizeof(file));
+        file_entry->sha = hash;
+        file_entry->file_size = stoi(file_size);
+        file_entry->users.push_back(temporary->user_id);
+        string key = group_id+filepath;
+        gidfile[key] = file_entry;
+        map<string,struct file*>:: iterator itrr;
 
-        int byteRec = recv(clientSocket,buf,4096,0);
-        if(byteRec < 0){
-          perror("connection issue");
-          exit(1);
+        for(itrr=gidfile.begin();itrr!=gidfile.end();itrr++)
+        {
+          cout<<itrr->first<<endl;
         }
-        if(byteRec == 0){
-          perror("client disconnected ");
-          exit(1);
-        }
-        string receive = string(buf,0,byteRec);
-        cout<<"received- : "<<receive<<endl;
+        string res = "File uploaded successfully";
+        csend = send(clientSocket,(char*)res.c_str(),1024,0);
 
-
-        cout<<filepath<<endl;
 
 
 
