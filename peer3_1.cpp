@@ -21,7 +21,7 @@ pthread_mutex_t locks;
 
         string user_id;
         string passwd;
-        char* ipaddr;
+        string ipaddr;
         int port;
         char* oldfile;
         char* newfile;
@@ -202,6 +202,7 @@ void* ChunkDownload(void * clientDetails){
   }
   struct sockaddr_in hint;
   hint.sin_family = AF_INET;
+  cout<<"cd - >port = "<<cd->port;
   hint.sin_port = htons(cd->port);
   hint.sin_addr.s_addr = INADDR_ANY;
   //inet_pton(AF_INET, ipAddress.c_str(), &hint.sin_addr);
@@ -295,6 +296,11 @@ void* clientThreadFunc(void* threadarg){
   {
     cout<<"set socket opt"<<endl;
     pthread_exit(NULL);
+  }
+
+  if(bind(sockfd,(sockaddr*)&client,sizeof(client)) == -1){
+    perror("error occured while binding");
+    exit(1);
   }
 
   int connRes = connect(sockfd,(struct sockaddr*)&hint,sizeof(hint));
@@ -430,6 +436,8 @@ void* clientThreadFunc(void* threadarg){
       temppasswd  = temp;
       client1.passwd = temppasswd;
       tempfinal =cmd+":"+ tempuser_id+":"+temppasswd;
+      client1.ipaddr = ipip;
+      client1.port = stoi(ipport);
       cout<<"final string in create_user = "<<tempfinal<<endl;
 
       serversend = send(sockfd,(char*)tempfinal.c_str(),1024,0);
@@ -951,12 +959,13 @@ void* clientThreadFunc(void* threadarg){
     //   cout<<"enter destination path"<<endl;
     // }
     // else{
+    int byteRec;
       string dest = temp1[3];
       string tempfinal = cmd + ":" + groupid + ":" + filename + ":" + dest;
       cout<<"final str = "<<tempfinal<<endl;
 
       serversend = send(sockfd,(char*)tempfinal.c_str(),4096,0);
-      int byteRec = recv(sockfd,buf,4096,0);
+       byteRec = recv(sockfd,buf,4096,0);
       if(byteRec < 0){
         perror("connection issue");
         exit(1);
@@ -967,11 +976,71 @@ void* clientThreadFunc(void* threadarg){
       }
       string receive = string(buf,0,byteRec);
       cout<<"received- : "<<receive<<endl;
+      memset(buf,0,4096);
 
       int ack =1;
-      serversend = send(sockfd,(int*)ack,sizeof(ack),0);
+      serversend = send(sockfd,&ack,sizeof(ack),0);
 
 
+      //--------receieve number of users in that group
+       byteRec = recv(sockfd,buf,4096,0);
+      if(byteRec < 0){
+        perror("connection issue");
+        exit(1);
+      }
+      if(byteRec == 0){
+        perror("client disconnected ");
+        exit(1);
+      }
+       receive = string(buf,0,byteRec);
+      cout<<"received- : "<<receive<<endl;
+      memset(buf,0,4096);
+
+      serversend = send(sockfd,&ack,sizeof(ack),0);
+
+      int n = stoi(receive);
+      cout<<"no of users in trackers "<<n<<endl;
+      //vector<pair <string, string>> ip_port;
+
+      //for loop for accessing
+      for(int i=0;i<n;i++){
+
+        byteRec = recv(sockfd,buf,4096,0);
+       if(byteRec < 0){
+         perror("connection issue");
+         exit(1);
+       }
+       if(byteRec == 0){
+         perror("client disconnected ");
+         exit(1);
+       }
+       string receive = string(buf,0,byteRec);
+       cout<<"received- : "<<receive<<endl;
+       memset(buf,0,4096);
+
+       serversend = send(sockfd,&ack,sizeof(ack),0);
+
+       if(byteRec>0){
+         //tokenize the string received into ip and port
+
+         char *temp_ip_port[1024];
+         int m =0;
+         temp_ip_port[m++] = strtok((char*)receive.c_str(),":");
+
+         //push the rest of the text into the array till EOF
+         //char *temp;
+         while((temp_ip_port[m] = strtok(NULL,":")) != NULL)
+               m++;
+         temp_ip_port[m] = NULL;
+         cout<<" ip of client = "<<temp_ip_port[0]<<endl;
+         cout<<"port of client = "<<temp_ip_port[1]<<endl;
+
+
+       }
+
+      }
+
+      // --------for loop ends here
 
   //  }
 

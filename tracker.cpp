@@ -211,6 +211,7 @@ string tempuser_id;
     user_entry->fd = clientSocket;
     user_entry->ipaddr = th->ipaddr;
     user_entry->port = th->port;
+    cout<<"port  = "<<th->port<<endl;
     user_entry->online = 0;
     char *temp;
     temp = temp1[1];
@@ -541,6 +542,8 @@ string tempuser_id;
         string groupid = temp1[1];
         string filename = temp1[2];
         string destination = temp1[3];
+        string downloadip;
+        string downloadport;
       //  string hash = temp1[4];
       //  struct file *file_entry;
       //  cout<<"list groups"<<endl;
@@ -571,7 +574,7 @@ string tempuser_id;
           cout<<"val of n = "<<val<<endl;
            csend = send(clientSocket,(char *)val.c_str(),sizeof(val),0);
            int ack;
-           recv(clientSocket,ack,sizeof(ack),0);
+           recv(clientSocket,&ack,sizeof(ack),0);
         //  gidfile[key] = file_entry;
 
         // ---------send sha of the file  if n>0
@@ -579,10 +582,26 @@ string tempuser_id;
 
 
            csend = send(clientSocket,(char *)val.c_str(),sizeof(val),0);
+           recv(clientSocket,&ack,sizeof(ack),0);
         }
+        struct file *downloadusers;
 
-        for(iterr = gidfile[key]->users.begin() ; iterr != gidfile[key]->users.end() ;iterr++){
-          cout<< *iterr<<endl;
+
+      //  cout<<"users in my trackers = "<<endl;
+
+        downloadusers = (struct file*)malloc(sizeof(file));
+        downloadusers = gidfile[key];
+        vector<string>::iterator it;
+        for(it = downloadusers->users.begin(); it!= downloadusers->users.end() ;it++){
+          cout<< *it<<endl;
+          downloadip = details[*it]->ipaddr;
+          downloadport = to_string(details[*it]->port);
+          string string_to_send = downloadip + ":"+downloadport;
+          csend = send(clientSocket,(char *)string_to_send.c_str(),sizeof(string_to_send),0);
+
+          recv(clientSocket,&ack,sizeof(ack),0);
+
+
         }
       //  csend = send(clientSocket,(char *)res.c_str(),sizeof(res),0);
       }
@@ -694,7 +713,7 @@ void* serverThreadFunc(void* threadarg){
   int PORT;
   // cout<<"enter port";
   // cin>>PORT;
-  PORT = 7386;
+  PORT = 7385;
   //create a socket
   int server_sock;
   server_sock = socket(AF_INET,SOCK_STREAM,0);
@@ -737,9 +756,13 @@ void* serverThreadFunc(void* threadarg){
     char *ipinput = new char[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(hint.sin_addr),ipinput,INET_ADDRSTRLEN);
     string ipip = ipinput;
-    int ipport = ntohs(hint.sin_port);
+    cout<<"hint.sinport"<<hint.sin_port<<endl;
+    string ipport = to_string(ntohs(hint.sin_port));
+    cout<<"ipport = "<<ipport<<endl;
+    int input_port = stoi(ipport);
+    cout<<"input_port = "<<input_port<<endl;
     th.ipaddr = ipip;
-    th.port = ipport;
+    th.port = input_port;
     // string socketRec = ipip+":"+ipport;
     //
     // cout<<"Socket "
