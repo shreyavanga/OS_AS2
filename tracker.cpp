@@ -834,7 +834,7 @@ void* serverThreadFunc(void* threadarg){
   int PORT;
   // cout<<"enter port";
   // cin>>PORT;
-  PORT = 7005;
+  PORT = 6000;
   //create a socket
   int server_sock;
   server_sock = socket(AF_INET,SOCK_STREAM,0);

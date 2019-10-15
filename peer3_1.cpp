@@ -23,10 +23,11 @@ pthread_mutex_t locks;
         string passwd;
         string ipaddr;
         int port;
-        char* oldfile;
-        char* newfile;
+        string oldfile;
+        string newfile;
         int fd;
         int chunks;
+        vector<int>chunksdetails;
     };
 
 
@@ -144,7 +145,7 @@ string sha256_file(FILE *file,int file_size, int *chunks, string filepath)
     return finalHash;
 }
 
-void* FileRecFunc(void* threadarg){
+/*void* FileRecFunc(void* threadarg){
 
       char host[NI_MAXHOST];
       struct clientDetails *th;
@@ -170,7 +171,8 @@ void* FileRecFunc(void* threadarg){
       cout<<"chunknum receievd at server is "<<chunknum<<endl;
       int ack=1;
       send(clientSocket,&ack,sizeof(ack),0);
-      recv(clientSocket,filename, sizeof(filename),0);
+      byteRec = recv(clientSocket,buf, 2048,0);
+      filename = string()
       cout<<"filename = "<<filename<<endl;
   //cout<<"chunk no = "<<c<<endl;
 
@@ -182,7 +184,7 @@ void* FileRecFunc(void* threadarg){
       // int size = ftell(fp);
       // rewind(fp);
       int size=512;
-      int byteRec =0;
+       byteRec =0;
       while( size>0 && (byteRec = fread(buf,sizeof(char),256,fp))>0 ){
           int serversend = send(clientSocket,buf,byteRec,0);
 
@@ -207,7 +209,7 @@ void* FileRecFunc(void* threadarg){
     // }
       fclose(fp);
       close(clientSocket);
-}
+}*/
 
 
 
@@ -216,31 +218,16 @@ void* ChunkDownload(void * clientDetails){
 	struct clientDetails* cd;
 	cd=(struct clientDetails*)clientDetails;
   int sockfd = cd->fd;
-	// int sockfd=socket(AF_INET,SOCK_STREAM,0);
-  // if(sockfd < 0){
-  //   perror("error while creating socket");
-  //   exit(1);
-  // }
-  // struct sockaddr_in hint;
-  // hint.sin_family = AF_INET;
-  // cout<<"cd - >port = "<<cd->port;
-  // hint.sin_port = htons(cd->port);
-  // hint.sin_addr.s_addr = INADDR_ANY;
-  // //inet_pton(AF_INET, ipAddress.c_str(), &hint.sin_addr);
-  // //connect to server on Socket
-  // char buf[256] = {0};
-  // char* filetobedownloaded=cd->oldfile;
-  // cout<<"port is "<<cd->port<<endl;
-  // cout<<"filename is "<<cd->oldfile<<endl;
-  // int connRes = connect(sockfd,(struct sockaddr*)&hint,sizeof(hint));
-  // if(connRes<0){
-  //   perror("couldnt connect with the server");
-  // //  exit(1);
-  // }
+  string filename;
+
   char buf[4096];
   int ack=1;
   memset(buf,0,4096);
+  int chunknum;
   int choice;
+  // res = "request for data"
+  //send(sockfd, (char*)res.c_str(),2048,0);
+  //recv(sockfd,&ack,sizeof(ack),0);
   int byteRec = recv(sockfd,&choice,sizeof(choice),0);
   if(byteRec < 0){
     perror("connection issue");
@@ -252,10 +239,12 @@ void* ChunkDownload(void * clientDetails){
   }
 //  string receive = string(buf,0,byteRec);
   cout<<"received choice- : "<<choice<<endl;
-  send(sockfd,&ack,sizeof(ack),0);
+
   if(choice == 1){
+    cout<<"choice  = 1"<<endl;
+send(sockfd,&ack,sizeof(ack),0);
     //request for chunks;
-    int byteRec = recv(sockfd,buf,4096,0);
+     byteRec = recv(sockfd,buf,4096,0);
     if(byteRec < 0){
       perror("connection issue");
         pthread_exit(NULL);
@@ -284,56 +273,148 @@ void* ChunkDownload(void * clientDetails){
       recv(sockfd,&ack,sizeof(ack),0);
 
     }
+  }
+  else{
+
+      send(sockfd,&ack,sizeof(ack),0);
+      int numchunk;
+      recv(sockfd,&numchunk,sizeof(numchunk),0);
+      cout<<"chunknum receievd at server is "<<chunknum<<endl;
+      int ack=1;
+      send(sockfd,&ack,sizeof(ack),0);
+      filename = cd->oldfile;
+      memset(buf,0,2046);
+      byteRec = recv(sockfd,buf, 2048,0);
+      filename = string(buf,0,byteRec);
+      cout<<"filename = "<<filename<<endl;
+      send(sockfd,&ack,sizeof(ack),0);
+
+  //cout<<"chunk no = "<<c<<endl;
+  int chunknum;
+      for(int i=0;i<numchunk;i++){
+
+        recv(sockfd,&chunknum, sizeof(chunknum),0);
+        cout<<"chunk num receievd = "<<chunknum<<endl;
+        send(sockfd,&ack,sizeof(ack),0);
+        //while receiving,display message
+          char buf[2048]={0};
+          memset(buf,0,2048);
+          int byteRec = recv(sockfd, buf,2048,0);
+          string receive = string(buf,0,byteRec);
+          filename = receive;
+          cout<<"filename internally  = "<<filename<<endl;
+          send(sockfd,&ack,sizeof(ack),0);
+          memset(buf,0,2048);
+          FILE *fp;
+          fp = fopen((char*)filename.c_str(),"rb");
+          fseek(fp,(chunknum-1)*512,SEEK_SET);
+          // int size = ftell(fp);
+          // rewind(fp);
+          int size=512;
+           byteRec =0;
+          while( size>0 && (byteRec = fread(buf,sizeof(char),256,fp))>0 ){
+              int serversend = send(sockfd,buf,byteRec,0);
+
+              size = size-byteRec;
+              cout<<"buff content = "<<buf<<endl;
+                memset(buf,'\0',256);
+          }
+          int ack1;
+          recv(sockfd,&ack1,sizeof(ack1),0);
 
 
 
-  }else{
-    //choice ==2
-    //requests for data;
-    /*
-    int chunkno = cd->chunks;
-    cout<<" accessing chunk no "<<chunkno<<endl;
-    if(send(sockfd,&chunkno,sizeof(chunkno),0)<0){
-      perror("error while sending file");
-    //  exit(1);
-    }
-
-    int ack;
-    recv(sockfd,&ack,sizeof(ack),0);
-    send(sockfd,filetobedownloaded,sizeof(filetobedownloaded),0);
-    pthread_mutex_lock(&locks);
-    FILE *fp = fopen(cd->newfile,"rab+");
-    cout<<"filename = "<<cd->newfile<<endl;
-    int chunksize = 512;
-    rewind(fp);
-    fseek(fp,(cd->chunks -1)*512,SEEK_SET);
-    int n;
-    while( chunksize > 0 && (n=recv(sockfd,buf,256,0)) > 0)
-  	{
-        cout<<" n  = "<<n<<endl;
-  		  int byter = fwrite(buf,sizeof(char),n,fp);
-        cout<<"buytes receive = "<<byter<<endl;
-  		  cout<<"Buffer"<<buf<<endl;
-        memset(buf,'\0',256);
-
-  		  chunksize=chunksize-n;
-  		  cout<<"CHUNKSIZE "<<chunksize<<endl;
-  	}
-
-  	fclose(fp);
-    cout<<"fiile closed"<<endl;
-  	int ack2=1;
-  	send(sockfd,&ack2,sizeof(ack2),0);
-  	cout<<"releasing lock"<<endl;
-  	pthread_mutex_unlock(&locks);
-  	cout<<"lock released"<<endl;*/
 
 
+      }
 
   }
 
-
 	close(sockfd);
+}
+
+void* DownloadChunk(void *clientDetails){
+  struct clientDetails* cd;
+	cd=(struct clientDetails*)clientDetails;
+  //int sockfd = cd->fd;
+	int sockfd=socket(AF_INET,SOCK_STREAM,0);
+  if(sockfd < 0){
+    perror("error while creating socket");
+    exit(1);
+  }
+  struct sockaddr_in hint;
+  hint.sin_family = AF_INET;
+  cout<<"cd - >port = "<<cd->port;
+  hint.sin_port = htons(cd->port);
+  hint.sin_addr.s_addr = INADDR_ANY;
+  //inet_pton(AF_INET, ipAddress.c_str(), &hint.sin_addr);
+  //connect to server on Socket
+//  char buf[256] = {0};
+  string filetobedownloaded=cd->oldfile;
+  cout<<"port is "<<cd->port<<endl;
+  cout<<"filename is "<<cd->oldfile<<endl;
+  int connRes = connect(sockfd,(struct sockaddr*)&hint,sizeof(hint));
+  if(connRes<0){
+    perror("couldnt connect with the server");
+  //  exit(1);
+  }
+  int ack=1;
+  char buf[4096];
+  int choice = 2;
+  send(sockfd,&choice,sizeof(choice),0);
+  recv(sockfd,&ack,sizeof(ack),0);
+  cout<<"ack receieve = "<<ack<<endl;
+
+  memset(buf,0,4096);
+    int nochunks = cd->chunks;
+   vector<int>chunks = cd->chunksdetails;
+
+   send(sockfd,&nochunks,sizeof(nochunks),0);
+   recv(sockfd,&ack,sizeof(ack),0);
+    send(sockfd,(char*)(cd->oldfile).c_str(),2048,0);
+   recv(sockfd,&ack,sizeof(ack),0);
+
+   for(int i=0;i<chunks.size();i++)
+   {
+     int chunkno = chunks[i];
+     cout<<" accessing chunk no "<<chunkno<<endl;
+     if(send(sockfd,&chunkno,sizeof(chunkno),0)<0){
+       perror("error while sending file");
+      exit(1);
+     }
+     //int ack;
+     recv(sockfd,&ack,sizeof(ack),0);
+     send(sockfd,(char*)(cd->oldfile).c_str(),4096,0);
+     recv(sockfd,&ack,sizeof(ack),0);
+
+     pthread_mutex_lock(&locks);
+     FILE *fp = fopen((char*)(cd->newfile).c_str(),"rab+");
+     cout<<"filename = "<<cd->newfile<<endl;
+     int chunksize = 512;
+     rewind(fp);
+     fseek(fp,(chunkno -1)*512,SEEK_SET);
+     int n;
+     while( chunksize > 0 && (n=recv(sockfd,buf,256,0)) > 0)
+     {
+         cout<<" n  = "<<n<<endl;
+         int byter = fwrite(buf,sizeof(char),n,fp);
+         cout<<"buytes receive = "<<byter<<endl;
+         cout<<"Buffer"<<buf<<endl;
+         memset(buf,'\0',256);
+
+         chunksize=chunksize-n;
+         cout<<"CHUNKSIZE "<<chunksize<<endl;
+     }
+
+     fclose(fp);
+     cout<<"fiile closed"<<endl;
+     int ack2=1;
+     send(sockfd,&ack2,sizeof(ack2),0);
+     cout<<"releasing lock"<<endl;
+     pthread_mutex_unlock(&locks);
+     cout<<"lock released"<<endl;
+   }
+
 }
 
 
@@ -1326,7 +1407,7 @@ void* clientThreadFunc(void* threadarg){
         }
         int choice;
         cout<<"connected successfully"<<endl;
-        cout<<"1. request for chunk  2.request for data "<<endl;
+        cout<<"1. press 1 (sends chunks) "<<endl;
         cin>>choice;
         if(send(download_socket,&choice,sizeof(choice),0)>0)
         {
@@ -1352,7 +1433,7 @@ void* clientThreadFunc(void* threadarg){
         // string receive = string(buf,0,byteRec);
         cout<<"received- : "<<ack<<endl;
 ///----ack received -----
-///---send filename for which chunks need to be searched
+//--send filename for which chunks need to be searched
         send(download_socket,(char*)filename.c_str(),1024,0);
         recv(download_socket,&ack,sizeof(ack),0);
         cout<<"received- : "<<ack<<endl;
@@ -1386,6 +1467,7 @@ void* clientThreadFunc(void* threadarg){
     cout<<p<<endl;
 
   }
+  close(download_socket);
 
 //
 //     ///-----------piece selection algorithm-------
@@ -1474,8 +1556,16 @@ void* clientThreadFunc(void* threadarg){
 
             }
 
+            for(int i = 0;i<chunkdetails.size();i++){
+              int sizeofchunks = tempchunkstosend[i].size();
+              for(int j=0;j<sizeofchunks;j++){
+                cout<<tempchunkstosend[i][j]<<" ";
+              }
+              cout<<endl;
+            }
+
     cout<<"--while loop ends here ------"<<endl;
-/*    char buf[256] = {0};
+    char buf[256] = {0};
   //  char download_filename[1024];
     // cout<<"enter filename to download"<<endl;
     //filename
@@ -1494,16 +1584,18 @@ void* clientThreadFunc(void* threadarg){
 
 rewind(fout);
 fclose(fout);
-int chunks=noofchunks;
+int chunks=nochunks;
   cout<<"file_size = "<<file_size<<endl;
     cout<<"file_size "<<file_size<<endl;
-    string newfile = temp1[3];
-    cout<<"enter filename"<<endl;
-    cin>>newFile;
+    temp = temp1[3];
+    string newfile = temp;
+    cout<<"new filename = "<<newfile<<endl;
+  //  cin>>newFile;
     FILE *fp;
-    fp = fopen((char*)newFile.c_str(),"wb+");
+    fp = fopen((char*)newfile.c_str(),"wb+");
+    //recv(download_socket,&ack1,)
     memset(buf,'\0',256);
-    int n,temporary_size;
+    int temporary_size;
     temporary_size = file_size;
     while(temporary_size>0){
       if(temporary_size >= 256)
@@ -1513,28 +1605,70 @@ int chunks=noofchunks;
        temporary_size = temporary_size -256;
     }
     fclose(fp);
-   int port;
+  int port;
     int clientnum=noofclients;
     pthread_t clientAvail[clientnum];
-    int arr[3] = {6000,7000,8000};
-    int ch[3] = {3,2,1};
-    int i=0;
+    // int arr[3] = {6000,7000,8000};
+    // int ch[3] = {3,2,1};
+     i=0;
     while(clientnum>0){
       struct clientDetails *cd = (struct clientDetails*)malloc(sizeof(struct clientDetails));
-      cd->ipaddr = "127.0.0.1";
+      string clientip = clientipport[i].first;
+      int clientport = clientipport[i].second;
+      cout<<"ip = "<<clientip<<endl;
+      cout<<"port = "<<clientport<<endl;
+      // choice =2;
+      //  if(send(download_socket,&choice,sizeof(choice),0)>0)
+      //   {
+      //       cout<<"choice sent successful"<<endl;
+      //   }
+      //   else
+      //   {
+      //       cout<<"choice sent unsuccessful"<<endl;
+      //   }
+      //   int ack;
+      //   //receive ack for sending choice
+      //   int byteRec = recv(download_socket,&ack,sizeof(ack),0);
+      //   if(byteRec < 0)
+      //   {
+      //       perror("connection issue");
+      //       exit(1);
+      //   }
+      //   if(byteRec == 0)
+      //   {
+      //       perror("client disconnected ");
+      //       exit(1);
+      //   }
+      //   // string receive = string(buf,0,byteRec);
+      //   cout<<"received- : "<<ack<<endl;
 
-      cd->oldfile = filename;
-      cd->newfile = newFile;
-      cd->port = arr[i];
-      cd->chunks = ch[i];
-      pthread_create(&clientAvail[i],NULL,&DownloadChunk, (void*)cd);
+
+      vector<int>chunktosend = tempchunkstosend[i];
+
+      for(int i=0;i<chunktosend.size();i++){
+        cout<<"chunk to send "<<chunktosend[i]<<endl;
+      }
+
+
+       //cd->ipaddr = clientip;
+
+      //
+       cd->oldfile = filename;
+      cd->fd = download_socket;
+       cd->newfile = newfile;
+       cd->port = clientport;
+       cd->ipaddr = clientip;
+      // cd->chunks = ch[i];
+      cd->chunks = nochunks;
+      cd->chunksdetails = chunktosend;
+       pthread_create(&clientAvail[i],NULL,&DownloadChunk, (void*)cd);
       i++;
       clientnum--;
     }
     for(int i=0;i<3;i++)
-     pthread_join(clientAvail[i],NULL);*/
+     pthread_join(clientAvail[i],NULL);
 
-
+     close(download_socket);
 
 
 
