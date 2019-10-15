@@ -263,7 +263,7 @@ string tempuser_id;
       }
     }
   }
-  else if(strcmp(temp1[0],"create_group") == 0){
+  else if((flag == 1) && strcmp(temp1[0],"create_group") == 0){
 
 
           string tempgroup = temp1[1];
@@ -289,7 +289,7 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"join_group")==0){
+      else if((flag == 1) && strcmp(temp1[0],"join_group")==0){
 
           string tempgroup = temp1[1];
         //  cout<<"group name=  "<<tempgroup<<endl;
@@ -338,7 +338,7 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"leave_group")==0){
+      else if((flag == 1) && strcmp(temp1[0],"leave_group")==0){
         string tempgroup = temp1[1];
         struct groupDetails *group_entry;
         group_entry = (struct groupDetails*)malloc(sizeof(groupDetails));
@@ -390,7 +390,7 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"list_requests")==0){
+      else if((flag == 1) && strcmp(temp1[0],"list_requests")==0){
           string tempgroup = temp1[1];
         struct groupDetails *group_entry;
         cout<<"list groups"<<endl;
@@ -401,40 +401,47 @@ string tempuser_id;
         string res;
         int i;
         int ack;
+        if(groups.find(tempgroup) == groups.end()){
+          res = "doesnt exist";
+            csend = send(clientSocket,(char*)res.c_str(),1024,0);
+          //cout<<res<<endl;
+        }
+        else{
 
-        if(groups[tempgroup]->group_owner == temporary->user_id){
+          if(groups[tempgroup]->group_owner == temporary->user_id){
 
-          int n = iter->pending_requests.size();
-          string tosend = to_string(n);
-    //      cout<<" n =  "<<n<<endl;
-          vector<string>::iterator it;
-          csend = send(clientSocket,(char*)tosend.c_str(),sizeof(tosend),0);
-            int byte = recv(clientSocket,&ack,sizeof(ack),0);
-        //searching for existence of user in the group
-          for( i=0;i<n;i++){
-            res = iter->pending_requests[i];
-           csend = send(clientSocket,(char*)res.c_str(),1024,0);
-            cout<<"user_id =  "<<iter->pending_requests[i]<<endl;
-            int byte = recv(clientSocket,&ack,sizeof(ack),0);
-            if(byte == 0 || byte<0){
-              cout<<"didnt receive ack"<<endl;
+            int n = iter->pending_requests.size();
+            string tosend = to_string(n);
+      //      cout<<" n =  "<<n<<endl;
+            vector<string>::iterator it;
+            csend = send(clientSocket,(char*)tosend.c_str(),sizeof(tosend),0);
+              int byte = recv(clientSocket,&ack,sizeof(ack),0);
+          //searching for existence of user in the group
+            for( i=0;i<n;i++){
+              res = iter->pending_requests[i];
+             csend = send(clientSocket,(char*)res.c_str(),1024,0);
+              cout<<"user_id =  "<<iter->pending_requests[i]<<endl;
+              int byte = recv(clientSocket,&ack,sizeof(ack),0);
+              if(byte == 0 || byte<0){
+                cout<<"didnt receive ack"<<endl;
+              }
+
+              }
+               res = "list printed successfully";
+
+
+          }  else{
+              //  the user logged in is not the owner of the group
+              res = "Only the owner of the group can perform this";
+              cout<<res<<endl;
+                  csend = send(clientSocket,(char*)res.c_str(),1024,0);
             }
 
-            }
-             res = "list printed successfully";
 
-
-        }  else{
-            //  the user logged in is not the owner of the group
-            res = "Only the owner of the group can perform this";
-            cout<<res<<endl;
-                csend = send(clientSocket,(char*)res.c_str(),1024,0);
-          }
-
-
+        }
 
       }
-      else if(strcmp(temp1[0],"accept_requests")==0){
+      else if((flag == 1) && strcmp(temp1[0],"accept_requests")==0){
         string tempgroup = temp1[1];
         string tempuser = temp1[2];
       struct groupDetails *group_entry;
@@ -511,7 +518,7 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"list_groups")==0){
+      else if((flag == 1) && strcmp(temp1[0],"list_groups")==0){
       //  string tempgroup = temp1[1];
         struct groupDetails *group_entry;
         cout<<"list groups"<<endl;
@@ -526,7 +533,7 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"list_files")==0){
+      else if((flag == 1) && strcmp(temp1[0],"list_files")==0){
 
         int ack;
         string res;
@@ -537,6 +544,7 @@ string tempuser_id;
         if(groups.find(tempgroup) == groups.end()){
           string res = "group doesnt exist";
           cout<<res<<endl;
+          send(clientSocket,(char*)res.c_str(),1024,0);
         }
         else{
 
@@ -569,22 +577,40 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"upload_file")==0){
+      else if((flag == 1) && strcmp(temp1[0],"upload_file")==0){
         string filepath = temp1[1];
         string group_id = temp1[2];
         string file_size = temp1[3];
         string hash = temp1[4];
         struct file *file_entry;
         struct groupDetails *group_file_entry = (struct groupDetails *)malloc(sizeof(struct groupDetails*));
+
+        struct groupDetails *iter=(struct groupDetails*)malloc(sizeof(groupDetails));
+        //map<string,struct groupDetails*>:: iterator itrr;
+        iter = groups[group_id];
+        if(groups.find(group_id) == groups.end()){
+        string  res = "doesnt exist";
+            csend = send(clientSocket,(char*)res.c_str(),1024,0);
+            pthread_exit(NULL);
+          //cout<<res<<endl;
+        }
+
         group_file_entry = groups[group_id];
+
+
         cout<<"list groups"<<endl;
         file_entry = (struct file*)malloc(sizeof(file));
         file_entry->sha = hash;
         file_entry->file_size = stoi(file_size);
         file_entry->users.push_back(temporary->user_id);
 
+
+
         string key = group_id+filepath;
         string res;
+
+
+
         if(gidfile.find(key) != gidfile.end()){
            res = "file already exist but user pushed to the owners list";
           cout<<res<<endl;
@@ -612,20 +638,28 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"download_file")==0){
+      else if((flag == 1) && strcmp(temp1[0],"download_file")==0){
 
         string groupid = temp1[1];
         string filename = temp1[2];
         string destination = temp1[3];
         string downloadip;
         string downloadport;
-      //  string hash = temp1[4];
-      //  struct file *file_entry;
-      //  cout<<"list groups"<<endl;
-      //  file_entry = (struct file*)malloc(sizeof(file));
-        // file_entry->sha = hash;
-        // file_entry->file_size = stoi(file_size);
-        // file_entry->users.push_back(temporary->user_id);
+
+        struct groupDetails *iter=(struct groupDetails*)malloc(sizeof(groupDetails));
+        //map<string,struct groupDetails*>:: iterator itrr;
+        iter = groups[groupid];
+        string res;
+        int i;
+        int ack;
+        if(groups.find(groupid) == groups.end()){
+          res = "doesnt exist";
+            csend = send(clientSocket,(char*)res.c_str(),1024,0);
+          //cout<<res<<endl;
+          pthread_exit(NULL);
+
+        }
+
         string key = groupid+filename;
 
       //  string res = "filename recived";
@@ -727,7 +761,7 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"logout")==0){
+      else if((flag == 1) && strcmp(temp1[0],"logout")==0){
         flag= 0;
         temporary->online = 0;
         string res;
@@ -738,17 +772,21 @@ string tempuser_id;
 
 
       }
-      else if(strcmp(temp1[0],"show_downloads")==0){
+      else if((flag == 1) && strcmp(temp1[0],"show_downloads")==0){
 
 
       }
-      else if(strcmp(temp1[0],"stop_share")==0){
+      else if((flag == 1) && strcmp(temp1[0],"stop_share")==0){
 
 
       }
       else if(receive.empty()){
         pthread_exit(NULL);
       }
+      // else if(flag == 0){
+      //   res = "login first";
+      //   send(clientSocket,(char*)res.c_str(),1024,0);
+      // }
       else{
         pthread_exit(NULL);
       }
