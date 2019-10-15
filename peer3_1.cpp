@@ -297,14 +297,14 @@ send(sockfd,&ack,sizeof(ack),0);
         cout<<"chunk num receievd = "<<chunknum<<endl;
         send(sockfd,&ack,sizeof(ack),0);
         //while receiving,display message
-          char buf[2048]={0};
-          memset(buf,0,2048);
-          int byteRec = recv(sockfd, buf,2048,0);
-          string receive = string(buf,0,byteRec);
-          filename = receive;
-          cout<<"filename internally  = "<<filename<<endl;
-          send(sockfd,&ack,sizeof(ack),0);
-          memset(buf,0,2048);
+          // char buf[2048]={0};
+          // memset(buf,0,2048);
+          // int byteRec = recv(sockfd, buf,2048,0);
+          // string receive = string(buf,0,byteRec);
+          // filename = receive;
+          // cout<<"filename internally  = "<<filename<<endl;
+          // send(sockfd,&ack,sizeof(ack),0);
+          // memset(buf,0,2048);
           FILE *fp;
           fp = fopen((char*)filename.c_str(),"rb");
           fseek(fp,(chunknum-1)*512,SEEK_SET);
@@ -329,7 +329,6 @@ send(sockfd,&ack,sizeof(ack),0);
       }
 
   }
-
 	close(sockfd);
 }
 
@@ -374,6 +373,7 @@ void* DownloadChunk(void *clientDetails){
     send(sockfd,(char*)(cd->oldfile).c_str(),2048,0);
    recv(sockfd,&ack,sizeof(ack),0);
 
+
    for(int i=0;i<chunks.size();i++)
    {
      int chunkno = chunks[i];
@@ -383,9 +383,7 @@ void* DownloadChunk(void *clientDetails){
       exit(1);
      }
      //int ack;
-     recv(sockfd,&ack,sizeof(ack),0);
-     send(sockfd,(char*)(cd->oldfile).c_str(),4096,0);
-     recv(sockfd,&ack,sizeof(ack),0);
+  recv(sockfd,&ack,sizeof(ack),0);
 
      pthread_mutex_lock(&locks);
      FILE *fp = fopen((char*)(cd->newfile).c_str(),"rab+");
@@ -406,14 +404,19 @@ void* DownloadChunk(void *clientDetails){
          cout<<"CHUNKSIZE "<<chunksize<<endl;
      }
 
-     fclose(fp);
+ fclose(fp);
      cout<<"fiile closed"<<endl;
      int ack2=1;
      send(sockfd,&ack2,sizeof(ack2),0);
-     cout<<"releasing lock"<<endl;
-     pthread_mutex_unlock(&locks);
-     cout<<"lock released"<<endl;
+     //cout<<"releasing lock"<<endl;
+
+    cout<<"releasing lock"<<endl;
+       pthread_mutex_unlock(&locks);
+       cout<<"lock released"<<endl;
+
+
    }
+
 
 }
 
